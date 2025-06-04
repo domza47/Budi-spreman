@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import com.example.budispreman.EmergencyItem
 
 @Composable
@@ -52,7 +53,8 @@ fun InfoScreen() {
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Priprema za katastrofe", style = MaterialTheme.typography.titleLarge)
 
@@ -66,31 +68,30 @@ fun InfoScreen() {
         Text("Volontiraj s Crvenim križem", style = MaterialTheme.typography.titleMedium)
 
         Text(
-            "Hrvatski Crveni križ uvijek traži volontere za pomoć u kriznim situacijama.\nPrijavi se putem weba ili e-maila.",
+            "Hrvatski Crveni križ uvijek traži volontere za pomoć u kriznim situacijama.\nProvjeri sve informacije na webu:",
             style = MaterialTheme.typography.bodyMedium
         )
 
         Button(
             onClick = {
-                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:volonteri@hck.hr")
-                    putExtra(Intent.EXTRA_SUBJECT, "Prijava za volontiranje")
-                }
-                context.startActivity(intent)
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Pošalji e-mail")
-        }
-
-        Button(
-            onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.hck.hr/volontiraj"))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.hck.hr/kako-pomoci/volontirajte/29"))
                 context.startActivity(intent)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Posjeti web stranicu")
         }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Dodaj sliku loga na dno
+        androidx.compose.foundation.Image(
+            painter = painterResource(id = R.drawable.hck_logo), // sliku nazovi 'hck_logo.jpg'
+            contentDescription = "Logo Hrvatskog Crvenog križa",
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .padding(top = 16.dp)
+        )
     }
 }
+

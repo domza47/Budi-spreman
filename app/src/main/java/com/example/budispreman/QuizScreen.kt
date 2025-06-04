@@ -1,39 +1,22 @@
 package com.example.budispreman
 
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import android.media.MediaPlayer
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.example.budispreman.ui.theme.BudiSpremanTheme
 import kotlinx.coroutines.delay
 
 @Composable
 fun QuizScreen() {
+    val context = LocalContext.current
+    val yayPlayer = remember { MediaPlayer.create(context, R.raw.yay) }
+    val nayPlayer = remember { MediaPlayer.create(context, R.raw.nay) }
+
     var questionIndex by remember { mutableStateOf(0) }
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     var correctAnswers by remember { mutableStateOf(0) }
@@ -91,7 +74,13 @@ fun QuizScreen() {
                 Button(
                     onClick = {
                         selectedIndex = index
-                        if (index == currentQuestion.correctAnswerIndex) correctAnswers++
+                        val correct = index == currentQuestion.correctAnswerIndex
+                        if (correct) {
+                            correctAnswers++
+                            yayPlayer.start()
+                        } else {
+                            nayPlayer.start()
+                        }
                     },
                     enabled = selectedIndex == null && !timeExpired,
                     modifier = Modifier.fillMaxWidth()

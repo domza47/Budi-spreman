@@ -1,116 +1,156 @@
 package com.example.budispreman
 
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
+import android.media.MediaPlayer
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.example.budispreman.ui.theme.BudiSpremanTheme
+import androidx.compose.ui.Alignment
 import kotlinx.coroutines.delay
-
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.RoundedCornerShape
-import com.example.budispreman.EmergencyItem
-
+import kotlinx.coroutines.launch
+import com.example.budispreman.ui.theme.BudiSpremanTheme
 
 @Composable
 fun BackpackScreen() {
-    var selectedItems by remember { mutableStateOf(setOf<String>()) }
-    var showResult by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val yayPlayer = remember { MediaPlayer.create(context, R.raw.yay) }
+    val nayPlayer = remember { MediaPlayer.create(context, R.raw.nay) }
 
-    val correctCount = emergencyItems.count { it.isEssential }
-    val selectedCorrect = emergencyItems.count { it.isEssential && selectedItems.contains(it.name) }
+    var droppedItems by remember { mutableStateOf(setOf<String>()) }
+    var availableItems by remember { mutableStateOf(emergencyItems.map { it.name }) }
+    var showResult by remember { mutableStateOf(false) }
+    var timeLeft by remember { mutableStateOf(60) }
+    var timerFinished by remember { mutableStateOf(false) }
+
+    val correctItems = emergencyItems.filter { it.isEssential }.map { it.name }.toSet()
+    val animatingItems = remember { mutableStateMapOf<String, Boolean>() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Timer
+    LaunchedEffect(timeLeft, timerFinished) {
+        if (!timerFinished && timeLeft > 0) {
+            delay(1000)
+            timeLeft--
+        } else if (timeLeft == 0 && !timerFinished) {
+            timerFinished = true
+            showResult = true
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp)
     ) {
         Text(
-            "Odaberi predmete koje bi stavio u torbu za katastrofu:",
-            style = MaterialTheme.typography.titleMedium
+            text = "Preostalo vrijeme: $timeLeft s",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (timeLeft <= 10) Color.Red else Color.Black
         )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text("Klikni na predmete koje želiš staviti u ruksak:", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .border(2.dp, Color.Black, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.backpack),
+                contentDescription = "Ruksak",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .height(180.dp)
+                    .padding(8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f)
         ) {
-            items(emergencyItems) {
-                emergencyItem ->
-                val isSelected = selectedItems.contains(emergencyItem.name)
-                val backgroundColor = if (isSelected) Color(0xFFE0F7FA) else Color.White
+            items(availableItems) { itemName ->
+                var isAnimating by remember { mutableStateOf(false) }
+                val offsetY by animateDpAsState(if (isAnimating) (-1000).dp else 0.dp)
 
                 Box(
                     modifier = Modifier
+                        .offset(y = offsetY)
                         .fillMaxWidth()
-                        .background(backgroundColor)
-                        .clickable {
-                            selectedItems = if (isSelected) {
-                                selectedItems - emergencyItem.name
-                            } else {
-                                selectedItems + emergencyItem.name
+                        .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                        .clickable(enabled = !isAnimating) {
+                            isAnimating = true
+                            animatingItems[itemName] = true
+                            coroutineScope.launch {
+                                delay(500)
+                                if (itemName in correctItems) {
+                                    yayPlayer.start()
+                                    droppedItems = droppedItems + itemName
+                                    availableItems = availableItems - itemName
+                                } else {
+                                    nayPlayer.start()
+                                }
+                                isAnimating = false
+                                animatingItems.remove(itemName)
                             }
                         }
                         .padding(12.dp)
-                        .border(1.dp, Color.Gray, shape = RoundedCornerShape(8.dp))
                 ) {
-                    Text(emergencyItem.name)
+                    Text(itemName)
                 }
             }
         }
 
-        Button(
-            onClick = { showResult = true },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Provjeri rezultat")
-        }
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (showResult) {
-            Spacer(modifier = Modifier.height(16.dp))
+            val correctDropped = droppedItems.count { it in correctItems }
             Text(
-                "Točno si odabrao $selectedCorrect od $correctCount ključnih predmeta.",
-                color = Color.Blue
+                "Točno si ubacio $correctDropped od ${correctItems.size} važnih predmeta.",
+                color = Color.Blue,
+                modifier = Modifier.fillMaxWidth()
             )
-
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    selectedItems = emptySet()
+                    droppedItems = emptySet()
+                    availableItems = emergencyItems.map { it.name }
                     showResult = false
+                    timerFinished = false
+                    timeLeft = 60
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Pokušaj ponovno")
+            }
+        } else {
+            Button(
+                onClick = {
+                    showResult = true
+                    timerFinished = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !timerFinished
+            ) {
+                Text("Provjeri rezultat")
             }
         }
     }
